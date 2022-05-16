@@ -4,7 +4,7 @@ import main as m
 from tkinter import messagebox as mb
 
 
-def admin_panel_page(root):
+def admin_panel_page(root, df):
     m.clear(root)
 
     Label(root, text="Admin panel", font=(None, 15, "bold"), background='red').grid(row=0, column=1, sticky=N)
@@ -15,7 +15,7 @@ def admin_panel_page(root):
     user_mgmt_b = Button(root, text='Show users', bg='yellow', command=lambda: user_table_page(root))
     user_mgmt_b.grid(row=2, column=1, sticky=EW, pady=5, padx=10)
 
-    add_user_b = Button(root, text='Add user', bg='yellow', command=lambda: add_user_page(root))
+    add_user_b = Button(root, text='Add user', bg='yellow', command=lambda: add_user_page(root, df))
     add_user_b.grid(row=3, column=1, sticky=EW, pady=5, padx=10)
 
     block_user_b = Button(root, text='Block user', bg='yellow', command=lambda: block_user_page(root))
@@ -24,7 +24,7 @@ def admin_panel_page(root):
     restrictions_b = Button(root, text='Apply restrictions', bg='yellow', command=lambda: restrictions_page(root))
     restrictions_b.grid(row=5, column=1, sticky=EW, pady=5, padx=10)
 
-    m.additional_buttons(root, 8)
+    m.additional_buttons(root, 8, df)
 
 
 def change_adm_pass(root):
@@ -53,7 +53,7 @@ def change_adm_pass(root):
     quit_b = Button(root, text='Return', bg='yellow', command=lambda: admin_panel_page(root))
     quit_b.grid(row=5, column=1, sticky=EW, pady=5)
 
-    m.additional_buttons(root, 6)
+    m.additional_buttons(root, 6, df)
 
 
 def user_table_page(root):
@@ -70,7 +70,7 @@ def user_table_page(root):
     quit_b = Button(root, text='Return', bg='yellow', command=lambda: admin_panel_page(root))
     quit_b.grid(row=2, column=1, sticky=N, pady=5)
 
-    m.additional_buttons(root, 3)
+    m.additional_buttons(root, 3, df)
 
 
 def add_user(user):
@@ -84,7 +84,7 @@ def add_user(user):
         mb.showerror(title="Error", message="Such user already exists.")
 
 
-def add_user_page(root):
+def add_user_page(root, df):
     m.clear(root)
     Label(root, text="Add user", font=(None, 15, "bold"), background='red').grid(row=0, column=1, sticky=N, pady=5)
 
@@ -99,10 +99,10 @@ def add_user_page(root):
     quit_b = Button(root, text='Return', bg='yellow', command=lambda: admin_panel_page(root))
     quit_b.grid(row=3, column=1, sticky=N, pady=5)
 
-    m.additional_buttons(root, 4)
+    m.additional_buttons(root, 4, df)
 
 
-def block_user_page(root):
+def block_user_page(root, df):
     m.clear(root)
     Label(root, text="Block user", font=(None, 15, "bold"), background='red').grid(row=0, column=1, sticky=N, pady=5)
 
@@ -120,7 +120,7 @@ def block_user_page(root):
     quit_b = Button(root, text='Return', bg='yellow', command=lambda: admin_panel_page(root))
     quit_b.grid(row=4, column=1, sticky=N, pady=5)
 
-    m.additional_buttons(root, 5)
+    m.additional_buttons(root, 5, df)
 
 
 def block(user, blocked: bool):
@@ -150,7 +150,7 @@ def restrictions_page(root):
     quit_b = Button(root, text='Return', bg='yellow', command=lambda: admin_panel_page(root))
     quit_b.grid(row=4, column=1, sticky=N, pady=5)
 
-    m.additional_buttons(root, 5)
+    m.additional_buttons(root, 5, df)
 
 
 def restrict(user, restricted: bool):

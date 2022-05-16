@@ -6,6 +6,7 @@ import pandas as pd
 import cryptolab as crypto
 from tkinter import messagebox as mb
 from tkinter import *
+import hashlib
 
 # v4 task
 pass_policy = '^[a-zA-zа-яА-Я]*$'
@@ -17,17 +18,19 @@ info = "The lab was developed by Anastasiia Dorosh FB92.\n" \
 
 
 def quit(df):
-    df = crypto.encrypt(df)
+    crypto.encrypt(df)
+    os.remove("tmp-vault.csv")
     exit()
 
 
 # vault here refers to our file
 def vault_setup():
-
     if os.path.isfile('vault.csv'):
-        df = pd.read_csv('vault.csv')
+        df = pd.read_csv('vault.csv', encoding='utf-8').drop(["Unnamed: 0"], axis=1)
         # decrypt the vault
-        # df = crypto.decrypt(df)
+        df = crypto.decrypt(df)
+        # add data to temp file
+        df.to_csv('tmp-vault.csv')
     else:
         df = pd.DataFrame([admin_setup], columns=columns)
         df.to_csv('vault.csv', index=False)
@@ -35,10 +38,11 @@ def vault_setup():
     return df
 
 
+# changing the temp value
 def change_vault(user, field, new_value):
     vault = vault_setup()
     vault.loc[vault['user'] == user, field] = new_value
-    vault.to_csv('vault.csv', index=False)
+    vault.to_csv('temp-vault.csv', index=False)
 
 
 def clear(root):
@@ -46,34 +50,33 @@ def clear(root):
         widget.destroy()
 
 
-def check_credentials(user, passwd):
+def check_credentials(root, user, passwd, vault):
     global faults
-    vault = vault_setup()
     user_data = vault.loc[vault['user'] == user]
     
     if faults < 2:
         if not user_data.empty:
             if pd.isnull(user_data["pass"]).values:
-                set_pass_page(root, user)
+                set_pass_page(root, user, vault)
             elif user_data["blocked"].item() == 0 and user_data["pass"].item() == passwd:
                 if user == "admin":
-                    adm.admin_panel_page(root)
+                    adm.admin_panel_page(root, vault)
                 else:
                     usr.user_panel_page(root, user)
             elif user_data["pass"].item() != passwd:
                 mb.showerror(title="Error", message="Wrong pass")
                 faults += 1
-                login_page(root)
+                login_page(root, vault)
             else:
                 mb.showerror(title="Error", message="Account was blocked.\nContact administrator for more info")
         else:
             mb.showerror(title="Error", message="No such user")
             clear(root)
-            login_page(root)
+            login_page(root, vault)
     else:
         mb.showerror(title="Error", message="Too many unsuccessful attempts.")
         faults = 0
-        quit(vault)
+        set_passphrase_window(root, vault)
 
 
 def set_pass(user, pass1, pass2):
@@ -101,7 +104,7 @@ def set_pass_init(root, user, pass1, pass2):
         set_pass_page(root, user)
 
 
-def set_pass_page(root, user):
+def set_pass_page(root, user, df):
     clear(root)
 
     Label(root, text="Set pass", font=(None, 15, "bold"), background= 'red').grid(row=0, column=1, sticky=N)
@@ -119,21 +122,21 @@ def set_pass_page(root, user):
     enter_b = Button(root, text='Submit', bg='yellow', command=lambda: set_pass_init(root, user, pass1.get(), pass2.get()))
     enter_b.grid(row=3, column=1, sticky=N)
 
-    quit_b = Button(root, text='Return', bg='yellow', command=lambda: login_page(root))
+    quit_b = Button(root, text='Return', bg='yellow', command=lambda: login_page(root, df))
     quit_b.grid(row=4, column=1, sticky=N, pady=5)
 
-    additional_buttons(root, 5)
+    additional_buttons(root, 5, df)
 
 
-def additional_buttons(root, row):
+def additional_buttons(root, row, df):
     info_ba = Button(root, text='Info', bg='yellow', command=lambda: mb.showinfo(title="Info", message=info))
     info_ba.grid(row=row, column=1, sticky=EW, pady=5, padx=10)
     
-    quit_b = Button(root, text='Quit', bg='yellow', command=lambda: quit())
+    quit_b = Button(root, text='Quit', bg='yellow', command=lambda: set_passphrase_window(root, df))
     quit_b.grid(row=row+1, column=1, sticky=EW, pady=5, padx=10)
 
 
-def login_page(root):
+def login_page(root, df):
     clear(root)
     root['bg'] = 'red'
     root.title('lab1')
@@ -150,12 +153,68 @@ def login_page(root):
     pass_e=Entry(root, textvariable=passwd, bg='pink')
     pass_e.grid(row=2, column=1, columnspan=3, sticky=W + E, padx=10)
 
-    enter_b = Button(root, text='Submit', bg='yellow', command=lambda: check_credentials(user.get(), passwd.get()))
+    enter_b = Button(root, text='Submit', bg='yellow', command=lambda: check_credentials(root, user.get(), passwd.get(), df))
     enter_b.grid(row=3, column=1, sticky=N)
 
-    additional_buttons(root, 4)
+    additional_buttons(root, 4, df)
+
+
+# check the pass
+def check_phrase_window(root, df):
+    clear(root)
+
+    Label(root, text="Passphrase: ", background='red', font="bold").grid(row=1, column=0, sticky=W, pady=10, padx=10)
+    phrase = StringVar()
+    phrase_e = Entry(root, textvariable=phrase, bg='pink')
+    phrase_e.grid(row=1, column=1, columnspan=3, sticky=W + E, padx=10)
+
+    enter_b = Button(root, text='Submit', bg='yellow', command=lambda: check_phrase(root, phrase, df))
+    enter_b.grid(row=3, column=1, sticky=N)
+
+    additional_buttons(root, 4, df)
+
+
+def check_phrase(root, phrase, df):
+    f = open("master.key", "r")
+    phrase = str(phrase)
+    phrase_hash = hashlib.md5(phrase.encode()).hexdigest()
+    print(phrase_hash)
+
+    if phrase_hash == f.read():
+        login_page(root, df)
+    else:
+        mb.showerror("Error", "The passphrase is wrong")
+
+    f.close()
+
+
+def set_passphrase_window(root, df):
+    clear(root)
+
+    Label(root, text="Passphrase: ", background='red', font="bold").grid(row=1, column=0, sticky=W, pady=10, padx=10)
+    phrase = StringVar()
+    phrase_e = Entry(root, textvariable=phrase, bg='pink')
+    phrase_e.grid(row=1, column=1, columnspan=3, sticky=W + E, padx=10)
+
+    enter_b = Button(root, text='Submit', bg='yellow', command=lambda: set_passphrase(phrase, df))
+    enter_b.grid(row=3, column=1, sticky=N)
+
+    additional_buttons(root, 4, df)
+
+
+def set_passphrase(phrase, df):
+    f = open("master.key", "w")
+    phrase = str(phrase)
+    phrase_hash = hashlib.md5(phrase.encode()).hexdigest()
+    f.write(phrase_hash)
+    f.close()
+
+    mb.showinfo("Info", "The passphrase was set")
+    quit(df)
+
 
 if __name__ == '__main__':
     root = Tk()
-    login_page(root)
+    df = vault_setup()
+    check_phrase_window(root, df)
     root.mainloop()
